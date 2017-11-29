@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+</head>
+<body>
+  <script>
+    var o = new MutationObserver(function(mutations) {
+      var notifications = [];
+      for (var i = 0; i < mutations.length; i++) {
+        var mutation = mutations[i];
+        if (mutation.type !== "attributes") {
+          continue;
+        }
+        if (mutation.attributeName !== "data-flip-id") {
+          continue;
+        }
+        if (mutation.target.parentElement === null) {
+          continue;
+        }
+        for (var j = 0; j < notifications.length; j++) {
+          if (notifications[j].target === mutation.target.parentElement) {
+            break;
+          }
+        }
+        if (j >= notifications.length) {
+          notifications[j] = {
+            target: mutation.target.parentElement,
+            changes: [[mutation.target.dataset.flipId, mutation.oldValue]]
+          };
+        } else {
+          var cs = notifications[j].changes;
+          cs.push([mutation.target.dataset.flipId, mutation.oldValue]);
+          notifications[j] = {
+            target: mutation.target.parentElement,
+            changes: cs
+          };
+        }
+      }
+
+      for (var j = 0; j < notifications.length; j++) {
+        var e = new Event('my-child-list-reconfigure');
+        var target = notifications[j].target;
+        var bounds = [];
+        target.querySelectorAll('[data-flip-id]').forEach(function(element) {
+          var r0 = target.getBoundingClientRect();
+          var r1 = element.getBoundingClientRect();
+          bounds.push({
+            element: element,
+            id: element.dataset.flipId,
+            rect:
+              { top: r1.top - r0.top,
+                left: r1.left - r0.left,
+                bottom: r1.bottom - r0.top,
+                right: r1.right - r0.left,
+              }
+          });
+        });
+        e.target = target;
+        e.bounds = bounds;
+        e.changes = notifications[j].changes;
+        target.dispatchEvent(e);
+      }
+    });
+    o.observe(document.body, {
+      attributes: true,
+      subtree: true,
+      attributeOldValue: true,
+      attributeFilter: ["data-flip-id"]
+    });
+  </script>
+  <script src="elm.js"></script>
+  <script>
+    Elm.Main.fullscreen();
+  </script>
+</body>
+</html>
